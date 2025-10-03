@@ -1,12 +1,4 @@
-/*!
-\file
-\brief Заголовочный файл для работы со стеком
-
-Файл содержит enum-ы - виды ошибок в стековых функциях,
-              структуру стека - массив, размер и объём
-              прототипы всех стековых функций
-*/
-#include "steck.h"
+#include "stack.h"
 
 StackErr_t StackInit(Stack_t *stk, unsigned capacity)
 {
@@ -21,7 +13,7 @@ StackErr_t StackInit(Stack_t *stk, unsigned capacity)
     stk->data = (int *)calloc(capacity, sizeof(int));
     if (!stk->data)
     {
-        // обнуление указателя, неинициализированный стек
+        // неинициализированный стек
         return STACK_ERR_DAMAGED;
     }
      
@@ -93,6 +85,9 @@ StackErr_t StackDestroy(Stack_t *stk)
     {
         return STACK_ERR_NULL_PTR;
     }
+
+    StackErr_t err = StackVerify(stk);
+    if (err) return err;
     
     // освобождение памяти стека
     if (stk->data)
@@ -135,36 +130,9 @@ void StackDump(const Stack_t *stk)
     {
         // заполнена ячейка (*) или нет ( )
         const char *marker = (i < stk->size) ? "*" : " ";
-        const char *poison = (i < stk->size) ? "" : " (POIZON)";
-        printf("    %s[%d] = %d%s\n", marker, i, stk->data[i], poison);
+        printf("    %s[%d] = %d\n", marker, i, stk->data[i]);
     }
     
     printf("  }\n",
            "}\n\n");
-}
-
-int main()
-{
-    Stack_t stk1 = {0};
-    
-    StackErr_t err = StackInit(&stk1, 5);
-    if (err != STACK_OK) {
-        printf("Ошибка инициализации: %d\n", err);
-        return 1;
-    }
-    
-    StackPush(&stk1, 10);
-    StackPush(&stk1, 20);
-    StackPush(&stk1, 30);
-
-    StackDump(&stk1);
-    
-    StackErr_t pop_err;
-    int x = StackPop(&stk1, &pop_err);
-   
-    StackDump(&stk1);
-    
-    StackDestroy(&stk1);
-    
-    return 0;
 }
