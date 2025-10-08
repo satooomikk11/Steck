@@ -12,10 +12,10 @@ enum OperationCode
     OP_SUB   = 4,
     OP_MUL   = 5,
     OP_DIV   = 6,
-    OP_PRINT = 7
+    OP_PRINT = 7,
+    OP_PUSHR = 8,
+    OP_POPR  = 9
 };
-// todo: не хватает извлечения квадратного корня
-// todo: вынести каждый кейс в свитче в отдельную функцию
 
 // сложение верхних элементов стека
 StackErr_t StackAdd(Stack_t *stk)
@@ -43,25 +43,7 @@ StackErr_t StackSub(Stack_t *stk)
     StackErr_t err;
 
     int b = StackPop(stk, &err);
-    // err имеет какое-то значение ошибки, поэтому ниче не работает
-    /*
-    if (err != STACK_OK)
-    {
-        printf("Ошибка: недостаточно элементов для вычитания\n");
-        return err;
-    }
-    */
-
     int a = StackPop(stk, &err);
-
-    /*
-    if (err != STACK_OK)
-    {
-        StackPush(stk, b);
-        printf("Ошибка: недостаточно элементов для вычитания\n");
-        return err;
-    }
-    */
 
     int result = a - b;
     return StackPush(stk, result);
@@ -127,6 +109,15 @@ StackErr_t StackPrint(Stack_t *stk)
     return STACK_OK;
 }
 
+Register_t ParseRegisterName(const char* regName)
+{
+    if (strcmp(regName, "RAX") == 0) return REG_RAX;
+    if (strcmp(regName, "RBX") == 0) return REG_RBX;
+    if (strcmp(regName, "RCX") == 0) return REG_RCX;
+    if (strcmp(regName, "RDX") == 0) return REG_RDX;
+    return (Register_t)-1; // Неверный регистр
+}
+
 // чтение из файла и преобразование в массив
 int* read_commands_from_file(const char* filename, int* commandCount)
 {
@@ -137,8 +128,18 @@ int* read_commands_from_file(const char* filename, int* commandCount)
         return NULL;
     }
     
+    int line_count = 0;
+    char ch;
+    while ((ch = fgetc(file)) != EOF)
+    {
+        if (ch == '\n')
+        {
+            line_count++;
+        }
+    }
+
     // временный массив для хранения команд
-    int* tempCommands = (int*)calloc(1000, sizeof(int));
+    int* commands = (int*)calloc(line_count * 2, sizeof(int));
     int count = 0;
     char line[MAX_LINE_LENGTH];
     
@@ -149,28 +150,58 @@ int* read_commands_from_file(const char* filename, int* commandCount)
         line[strcspn(line, "\n")] = 0;
 
         // преобразуем команды в числа
-        if (strcmp(line, "EXIT") == 0) { tempCommands[count++] = OP_EXIT; }
+        if (strncmp(line, "PUSHR ", 6) == 0)
+        {
+            const char* regName = line + 6;
+            Register_t reg = ParseRegisterName(regName);
+            if (reg != (Register_t)-1)
+            {
+                commands[count++] = OP_PUSHR;
+                commands[count++] = (int)reg;
+            }
+            else
+            {
+                printf("ERROR: неверный регистр %s\n", regName);
+            }
+        }
+
+        else if (strncmp(line, "POPR ", 5) == 0)
+        {
+            const char* regName = line + 5;
+            Register_t reg = ParseRegisterName(regName);
+            if (reg != (Register_t)-1)
+            {
+                commands[count++] = OP_POPR;
+                commands[count++] = (int)reg;
+            }
+            else
+            {
+                printf("ERROR: неверный регистр %s\n", regName);
+            }
+        }
+
+        else if (strcmp(line, "EXIT") == 0) { commands[count++] = OP_EXIT; }
         else if (strncmp(line, "PUSH ", 5) == 0)
-        { // todo could have been done easier
-            tempCommands[count++] = OP_PUSH;
+        {
+            commands[count++] = OP_PUSH;
 
             int value = 0;
             // сдвигаем указатель на 5 вправо и записываем число в value
             if (sscanf(line + 5, "%d", &value) == 1)
             {
-                tempCommands[count++] = value;
+                commands[count++] = value;
             }
             else
             {
                 printf("Ошибка: неверный формат числа в PUSH\n");
             }
         }
-        else if (strcmp(line, "POP") == 0)   { tempCommands[count++] = OP_POP;   }
-        else if (strcmp(line, "ADD") == 0)   { tempCommands[count++] = OP_ADD;   }
-        else if (strcmp(line, "SUB") == 0)   { tempCommands[count++] = OP_SUB;   }
-        else if (strcmp(line, "MUL") == 0)   { tempCommands[count++] = OP_MUL;   }
-        else if (strcmp(line, "DIV") == 0)   { tempCommands[count++] = OP_DIV;   }
-        else if (strcmp(line, "PRINT") == 0) { tempCommands[count++] = OP_PRINT; }
+        else if (strcmp(line, "POP") == 0)   { commands[count++] = OP_POP;   }
+        else if (strcmp(line, "ADD") == 0)   { commands[count++] = OP_ADD;   }
+        else if (strcmp(line, "SUB") == 0)   { commands[count++] = OP_SUB;   }
+        else if (strcmp(line, "MUL") == 0)   { commands[count++] = OP_MUL;   }
+        else if (strcmp(line, "DIV") == 0)   { commands[count++] = OP_DIV;   }
+        else if (strcmp(line, "PRINT") == 0) { commands[count++] = OP_PRINT; }
         else
         {
             printf("ОШИБКА: %s\n", line);
@@ -178,15 +209,7 @@ int* read_commands_from_file(const char* filename, int* commandCount)
     }
     
     fclose(file);
-    
-    // создаем финальный массив нужного размера
-    int* commands = (int*)calloc(count, sizeof(int));
-
-    memcpy(commands, tempCommands, count * sizeof(int));
-    free(tempCommands);
-    
     *commandCount = count;
-
     return commands;
 }
 
@@ -195,7 +218,7 @@ void execute_commands(int* commands, int commandCount)
 {
     // создаём стек
     Stack_t stk = {};
-    StackErr_t err = StackInit(&stk, 5); // задаётся capacity 
+    StackErr_t err = StackInit(&stk, 10); // задаётся capacity 
     if (err != STACK_OK) {
         printf("Ошибка инициализации стека: %d\n", err);
         return;
@@ -208,6 +231,42 @@ void execute_commands(int* commands, int commandCount)
         
         switch (opcode)
         {
+            case OP_PUSHR:
+                if (i + 1 < commandCount)
+                {
+                    Register_t reg = (Register_t)commands[i + 1];
+                    err = StackPushReg(&stk, reg);
+                    if (err != STACK_OK)
+                    {
+                        printf("PUSHR ERROR: %d\n", err);
+                    }
+                    i += 2;
+                }
+                else
+                {
+                    printf("ERROR: нет регистра после PUSHR\n");
+                    i++;
+                }
+                break;
+                
+            case OP_POPR:
+                if (i + 1 < commandCount)
+                {
+                    Register_t reg = (Register_t)commands[i + 1];
+                    err = StackPopReg(&stk, reg);
+                    if (err != STACK_OK)
+                    {
+                        printf("POPR ERROR: %d\n", err);
+                    }
+                    i += 2;
+                }
+                else
+                {
+                    printf("ERROR: нет регистра после POPR\n");
+                    i++;
+                }
+                break;
+
             case OP_EXIT:
                 StackDestroy(&stk);
                 return ;
@@ -229,7 +288,7 @@ void execute_commands(int* commands, int commandCount)
                 }
                 else
                 {
-                    printf("Ошибка: нет числа после PUSH\n");
+                    printf("ERROR: нет числа после PUSH\n");
                     i++;
                 }
                 break;
@@ -339,6 +398,31 @@ void write_commands_to_file(const char* filename, int* commands, int commandCoun
         
         switch (opcode)
         {
+            case OP_PUSHR:
+                if (i + 1 < commandCount)
+                {
+                    Register_t reg = (Register_t)commands[i + 1];
+                    i += 2;
+                }
+                else
+                {
+                    printf("ERROR: нет регистра после PUSHR\n");
+                    i++;
+                }
+                break;
+                
+            case OP_POPR:
+                if (i + 1 < commandCount)
+                {
+                    i += 2;
+                }
+                else
+                {
+                    printf("ERROR: нет регистра после POPR\n");
+                    i++;
+                }
+                break;
+
             case OP_EXIT:
                 fprintf(file, "EXIT\n");
                 i++;
@@ -407,7 +491,7 @@ int main()
     const char* outputFile = "output_commands.txt";
     
     // чтение команд из файла и преобразование в числовой массив
-    int  commandCount = 0; // todo 
+    int  commandCount = 0;
     int* commands = read_commands_from_file(inputFile, &commandCount);
     
     if (!commands)

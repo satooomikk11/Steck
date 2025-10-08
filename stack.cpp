@@ -1,5 +1,8 @@
 #include "stack.h"
 
+// инициализация регистров
+int registers[4] = {};
+
 StackErr_t StackInit(Stack_t *stk, unsigned capacity)
 {
     assert(stk);
@@ -77,6 +80,39 @@ int StackPop(Stack_t *stk, StackErr_t *err)
     }
     
     return value;
+}
+
+// положить значение регистра в стек
+StackErr_t StackPushReg(Stack_t *stk, Register_t reg)
+{
+    if (reg < REG_RAX || reg > REG_RDX)
+    {
+        printf("Ошибка: неверный регистр %d\n", reg);
+        return STACK_ERR_INVALID_REGISTER;
+    }
+    
+    int value = registers[reg];
+    return StackPush(stk, value);
+}
+
+// взять значение из стека и сохранить в регистр
+StackErr_t StackPopReg(Stack_t *stk, Register_t reg)
+{
+    if (reg < REG_RAX || reg > REG_RDX)
+    {
+        printf("Ошибка: неверный регистр %d\n", reg);
+        return STACK_ERR_INVALID_REGISTER;
+    }
+    
+    StackErr_t err;
+    int value = StackPop(stk, &err);
+    
+    if (err == STACK_OK)
+    {
+        registers[reg] = value;
+    }
+    
+    return err;
 }
 
 StackErr_t StackDestroy(Stack_t *stk)
