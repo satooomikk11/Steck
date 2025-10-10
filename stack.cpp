@@ -162,7 +162,7 @@ void StackDump(const Stack_t *stk)
     printf("  data[%p]\n", (void*)stk->data);
     printf("  {\n");
     
-    for (unsigned i = 0; i < stk->capacity; i++)
+    for (int i = 0; i < stk->capacity; i++)
     {
         // заполнена ячейка (*) или нет ( )
         const char *marker = (i < stk->size) ? "*" : " ";
