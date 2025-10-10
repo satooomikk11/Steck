@@ -21,7 +21,8 @@ enum OperationCode
     OP_DIV   = 6,
     OP_PRINT = 7,
     OP_PUSHR = 8,
-    OP_POPR  = 9
+    OP_POPR  = 9,
+    OP_JUMP  = 10
 };
 
 // структура, которая передается процессору

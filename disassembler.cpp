@@ -18,6 +18,20 @@ void write_commands_to_file(const char* filename, int* commands, int commandCoun
         
         switch (opcode)
         { 
+            case OP_JUMP:
+                if (i + 1 < commandCount)
+                {
+                    int offset = commands[i + 1];
+                    fprintf(file, "JUMP %d\n", offset);
+                    i += 2;
+                }
+                else
+                {
+                    fprintf(file, "JUMP ERROR\n");
+                    i++;
+                }
+                break;
+                
             case OP_PUSHR:
                 if (i + 1 < commandCount)
                 {

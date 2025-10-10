@@ -52,9 +52,20 @@ int* read_commands_from_file(const char* filename, int* commandCount)
                 printf("ERROR: неверный регистр %s\n", reg_name);
             }
         }
-        else if (strcmp(line, "EXIT") == 0) { 
-            tempCommands[count++] = OP_EXIT; 
+        else if (strncmp(line, "JUMP ", 5) == 0)
+        {
+            tempCommands[count++] = OP_JUMP;
+            int offset = 0;
+            if (sscanf(line + 5, "%d", &offset) == 1)
+            {
+                tempCommands[count++] = offset;
+            }
+            else
+            {
+                printf("Ошибка: неверный формат смещения в JUMP\n");
+            }
         }
+        else if (strcmp(line, "EXIT") == 0) { tempCommands[count++] = OP_EXIT; }
         else if (strncmp(line, "PUSH ", 5) == 0)
         {
             tempCommands[count++] = OP_PUSH;

@@ -11,5 +11,6 @@ StackErr_t StackSub  (Stack_t *stk);
 StackErr_t StackMul  (Stack_t *stk);
 StackErr_t StackDiv  (Stack_t *stk);
 StackErr_t StackPrint(Stack_t *stk);
+StackErr_t StackJump (int* commands, int commandCount, int* current_index, int jump_offset);
 
 #endif // PROCESSOR_H

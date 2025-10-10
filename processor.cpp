@@ -138,6 +138,26 @@ StackErr_t processor_init(Processor* proc, unsigned stack_capacity)
     return STACK_OK;
 }
 
+StackErr_t StackJump(int* commands, int commandCount, int* current_index, int jump_offset)
+{
+    if (!commands || !current_index)
+    {
+        return STACK_ERR_NULL_PTR;
+    }
+    
+    // считаем новый индекс
+    int new_index = *current_index + jump_offset;
+    if (new_index < 0 || new_index >= commandCount)
+    {
+        printf("Ошибка JUMP: выход за границы массива команд\n");
+        return STACK_ERR_DAMAGED;
+    }
+    
+    *current_index = new_index;
+    
+    return STACK_OK;
+}
+
 // выполнение команд из массива (процессор)
 StackErr_t execute_commands(int* commands, int commandCount)
 {
@@ -187,6 +207,23 @@ StackErr_t execute_commands(int* commands, int commandCount)
                 else
                 {
                     printf("ERROR: нет регистра после POPR\n");
+                }
+                break;
+
+            case OP_JUMP:
+                if (i + 1 < commandCount)
+                {
+                    int jump_offset = commands[i+1];
+                    err = StackJump(commands, commandCount, &i, jump_offset);
+                    if (err != STACK_OK)
+                    {
+                        printf("JUMP ERROR: %d\n", err);
+                    }
+                    i++;
+                }
+                else
+                {
+                    printf("ERROR: нет сдвига после JUMP\n");
                 }
                 break;
 
